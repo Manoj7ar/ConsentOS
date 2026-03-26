@@ -1,0 +1,2 @@
+"""ConsentOS MCP package."""
+

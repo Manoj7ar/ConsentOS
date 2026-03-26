@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: consentos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  backend:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      BACKEND_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/consentos
+      BACKEND_FRONTEND_URL: http://localhost:3000
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
+      BACKEND_ALLOW_MOCK_CONNECTED_ACCOUNTS: ${BACKEND_ALLOW_MOCK_CONNECTED_ACCOUNTS:-false}
+      BACKEND_ALLOW_MOCK_TOKEN_VAULT: ${BACKEND_ALLOW_MOCK_TOKEN_VAULT:-false}
+      BACKEND_AUTO_APPROVE_WHEN_CIBA_UNAVAILABLE: ${BACKEND_AUTO_APPROVE_WHEN_CIBA_UNAVAILABLE:-false}
+      INTERNAL_API_SHARED_SECRET: ${INTERNAL_API_SHARED_SECRET:-change-me}
+    command: sh -c "pip install -e . && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  orchestrator:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./mcp:/app
+    environment:
+      MCP_BACKEND_BASE_URL: http://backend:8000
+      INTERNAL_API_SHARED_SECRET: ${INTERNAL_API_SHARED_SECRET:-change-me}
+    command: sh -c "pip install -e . && uvicorn consentos_mcp.orchestrator.runtime:app --host 0.0.0.0 --port 8100"
+    ports:
+      - "8100:8100"
+    depends_on:
+      - backend
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    environment:
+      INTERNAL_API_SHARED_SECRET: ${INTERNAL_API_SHARED_SECRET:-change-me}
+      ORCHESTRATOR_BASE_URL: http://orchestrator:8100
+      BACKEND_PROXY_URL: http://backend:8000
+      AUTH0_SECRET: ${AUTH0_SECRET:-replace-me}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN:-example.us.auth0.com}
+      APP_BASE_URL: http://localhost:3000
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET:-}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-https://api.consentos.local}
+      AUTH0_SCOPE: ${AUTH0_SCOPE:-openid profile email offline_access}
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - orchestrator
+
+volumes:
+  postgres-data:

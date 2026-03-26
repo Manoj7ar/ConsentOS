@@ -1,0 +1,16 @@
+.venv/
+.logs/
+__pycache__/
+.pytest_cache/
+.next/
+node_modules/
+dist/
+build/
+*.egg-info/
+*.tsbuildinfo
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+.env
