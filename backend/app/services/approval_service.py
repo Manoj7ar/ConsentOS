@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -158,7 +158,7 @@ class ApprovalService:
             return None
         input_payload = dict(record.input) if isinstance(record.input, dict) else {}
         meta = dict(input_payload.get("_consentos", {}))
-        approved_until = (record.created_at + timedelta(minutes=approval_window_minutes)).isoformat()
+        approved_until = (datetime.now(timezone.utc) + timedelta(minutes=approval_window_minutes)).isoformat()
         meta["approved_until"] = approved_until
         input_payload["_consentos"] = meta
         self.activity_service.update_input(user_id, record.id, input_payload)

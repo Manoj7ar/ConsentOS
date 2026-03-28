@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -60,7 +58,6 @@ class PermissionRepository:
         return permission
 
     def clear_expired_for_user(self, user_id: int) -> None:
-        now = datetime.now(timezone.utc)
         for row in self.list_for_user(user_id):
             # approval_window_minutes controls reuse window after approval and should
             # not auto-expire policy permissions by itself.
