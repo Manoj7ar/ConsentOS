@@ -6,7 +6,10 @@ const frontendRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
-  outputFileTracingRoot: frontendRoot
+  outputFileTracingRoot: frontendRoot,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

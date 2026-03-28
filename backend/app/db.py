@@ -25,6 +25,7 @@ def init_db(engine) -> None:
 
     Base.metadata.create_all(bind=engine)
     _ensure_connected_account_columns(engine)
+    _ensure_permission_columns(engine)
 
 
 def session_scope(session_factory) -> Generator[Session, None, None]:
@@ -59,3 +60,22 @@ def _ensure_connected_account_columns(engine) -> None:
     with engine.begin() as connection:
         for name, definition in missing.items():
             connection.execute(text(f"ALTER TABLE connected_accounts ADD COLUMN {name} {definition}"))
+
+
+def _ensure_permission_columns(engine) -> None:
+    inspector = inspect(engine)
+    if "permissions" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("permissions")}
+    required_columns = {
+        "approval_window_minutes": "INTEGER NULL",
+    }
+
+    missing = {name: definition for name, definition in required_columns.items() if name not in existing}
+    if not missing:
+        return
+
+    with engine.begin() as connection:
+        for name, definition in missing.items():
+            connection.execute(text(f"ALTER TABLE permissions ADD COLUMN {name} {definition}"))

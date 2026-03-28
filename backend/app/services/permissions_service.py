@@ -51,6 +51,7 @@ class PermissionsService:
         self.settings = settings or get_settings()
 
     def list_permissions(self, user_id: int, agent_name: str = "FreelanceCOOAgent") -> list[PermissionRuleRead]:
+        self.repo.clear_expired_for_user(user_id)
         rows = self.repo.list_for_user(user_id)
         indexed = {(row.agent_name, row.provider, row.tool_name): row for row in rows}
         permissions: list[PermissionRuleRead] = []
@@ -64,6 +65,7 @@ class PermissionsService:
                         tool_name=tool_name,
                         is_allowed=True,
                         risk_level=DEFAULT_TOOL_RISK[tool_name],
+                        approval_window_minutes=None,
                     )
                 )
                 continue
@@ -75,6 +77,7 @@ class PermissionsService:
                     tool_name=row.tool_name,
                     is_allowed=row.is_allowed,
                     risk_level=row.risk_level,
+                    approval_window_minutes=row.approval_window_minutes,
                     created_at=row.created_at,
                     updated_at=row.updated_at,
                 )
@@ -89,6 +92,7 @@ class PermissionsService:
             tool_name=payload.tool_name,
             is_allowed=payload.is_allowed,
             risk_level=payload.risk_level,
+            approval_window_minutes=payload.approval_window_minutes if payload.is_allowed else None,
         )
         return PermissionRuleRead(
             id=row.id,
@@ -97,28 +101,38 @@ class PermissionsService:
             tool_name=row.tool_name,
             is_allowed=row.is_allowed,
             risk_level=row.risk_level,
+            approval_window_minutes=row.approval_window_minutes,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )
 
     def evaluate(self, user_id: int, agent_name: str, provider: str, tool_name: str) -> RiskCheckResponse:
+        self.repo.clear_expired_for_user(user_id)
         row = self.repo.get_for_tool(user_id, agent_name, provider, tool_name)
         if row is None:
             is_allowed = True
             risk_level = DEFAULT_TOOL_RISK.get(tool_name, "medium")
+            approval_window_minutes = None
         else:
             is_allowed = row.is_allowed
             risk_level = row.risk_level
+            approval_window_minutes = row.approval_window_minutes
         needs_approval = is_allowed and (risk_level == "high" or tool_name == "stripe:create_payment_link")
         return RiskCheckResponse(
             permission_allowed=is_allowed,
             needs_approval=needs_approval,
             risk_level=risk_level,
+            approval_window_minutes=approval_window_minutes,
         )
 
     def simulate(self, user_id: int, payload: PolicySimulationRequest) -> PolicySimulationResponse:
         risk = self.evaluate(user_id, payload.agent_name, payload.provider, payload.tool_name)
         permission_allowed = payload.permission_allowed_override if payload.permission_allowed_override is not None else risk.permission_allowed
+        approval_window_minutes = (
+            payload.approval_window_minutes_override
+            if payload.approval_window_minutes_override is not None
+            else risk.approval_window_minutes
+        )
         needs_approval = permission_allowed and risk.needs_approval
         connected_account_status = self._connected_account_status(
             user_id=user_id,
@@ -141,6 +155,8 @@ class PermissionsService:
         elif needs_approval:
             decision = "approval_required"
             reason_codes.append("step_up_approval_required")
+            if approval_window_minutes:
+                reason_codes.append(f"approval_window_{approval_window_minutes}m")
         else:
             decision = "allowed"
             reason_codes.append("policy_allows_execution")
@@ -150,10 +166,17 @@ class PermissionsService:
             risk_level=risk.risk_level,
             permission_allowed=permission_allowed,
             needs_approval=needs_approval,
+            approval_window_minutes=approval_window_minutes,
             connected_account_status=connected_account_status,
             strict_live_mode=self.settings.strict_live_mode,
             reason_codes=reason_codes,
-            explanation=self._explanation(decision, connected_account_status, reason_codes, risk.risk_level),
+            explanation=self._explanation(
+                decision,
+                connected_account_status,
+                reason_codes,
+                risk.risk_level,
+                approval_window_minutes,
+            ),
         )
 
     def _connected_account_status(self, *, user_id: int, provider: str, override_present: bool | None) -> str:
@@ -165,7 +188,13 @@ class PermissionsService:
         return "disconnected"
 
     @staticmethod
-    def _explanation(decision: str, connected_account_status: str, reason_codes: list[str], risk_level: str) -> str:
+    def _explanation(
+        decision: str,
+        connected_account_status: str,
+        reason_codes: list[str],
+        risk_level: str,
+        approval_window_minutes: int | None,
+    ) -> str:
         if decision == "blocked":
             if "strict_live_disabled" in reason_codes:
                 return "Strict live mode is not fully enabled, so this action would be blocked before execution."
@@ -175,5 +204,22 @@ class PermissionsService:
                 return "The provider account metadata is stale, so the action should not run until it is synced again."
             return "Policy currently blocks this tool for the selected user and agent."
         if decision == "approval_required":
+            if approval_window_minutes:
+                return (
+                    f"Policy allows this tool and sets a delegated approval window of {approval_window_minutes} minutes, "
+                    f"but its {risk_level} risk still requires explicit approval before execution."
+                )
             return f"Policy allows this tool, but its {risk_level} risk requires explicit approval before execution."
+        if approval_window_minutes:
+            return (
+                f"Policy and account state allow this action. If an approval is granted, it can be reused for "
+                f"{approval_window_minutes} minutes."
+            )
         return "Policy and account state allow this action to execute immediately."
+
+    def approval_window_minutes_for_tool(self, user_id: int, agent_name: str, provider: str, tool_name: str) -> int | None:
+        self.repo.clear_expired_for_user(user_id)
+        row = self.repo.get_for_tool(user_id, agent_name, provider, tool_name)
+        if row is None or not row.is_allowed:
+            return None
+        return row.approval_window_minutes

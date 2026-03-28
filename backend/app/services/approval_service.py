@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -49,6 +51,7 @@ class ApprovalService:
                 authorization_request_id=activity.authorization_request_id,
                 detail="Approval not required.",
                 mode="not-required",
+                approved_until=None,
             )
 
         try:
@@ -83,6 +86,7 @@ class ApprovalService:
             authorization_request_id=start.authorization_request_id,
             detail=start.detail,
             mode=start.mode,
+            approved_until=None,
         )
 
     async def status(self, user: AuthenticatedUser, activity_id: int) -> ApprovalStatusResponse:
@@ -94,12 +98,19 @@ class ApprovalService:
                 authorization_request_id=record.authorization_request_id,
                 detail=self._resolve_terminal_detail(record.status),
                 mode=self._resolve_mode(record.authorization_request_id),
+                approved_until=self._read_approved_until(record.input),
             )
         if not record.authorization_request_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Activity is not linked to approval.")
 
         poll_result = await self.provider.poll(record.authorization_request_id)
         if poll_result.status in {"approved", "rejected"}:
+            approval_window_minutes = self.permissions_service.approval_window_minutes_for_tool(
+                user.id,
+                record.agent_name,
+                record.provider,
+                record.tool_name,
+            )
             updated = self.activity_service.update(
                 user.id,
                 activity_id,
@@ -111,6 +122,7 @@ class ApprovalService:
                 authorization_request_id=updated.authorization_request_id,
                 detail=poll_result.detail,
                 mode=self._resolve_mode(updated.authorization_request_id),
+                approved_until=self._persist_approval_window(user.id, updated, approval_window_minutes),
             )
 
         return ApprovalStatusResponse(
@@ -119,6 +131,7 @@ class ApprovalService:
             authorization_request_id=record.authorization_request_id,
             detail=poll_result.detail,
             mode=self._resolve_mode(record.authorization_request_id),
+            approved_until=self._read_approved_until(record.input),
         )
 
     def require_approval(self, user_id: int, agent_name: str, provider: str, tool_name: str) -> RiskCheckResponse:
@@ -137,3 +150,28 @@ class ApprovalService:
         if status == "failed":
             return "The approved action failed during execution."
         return "Approval already resolved."
+
+    def _persist_approval_window(self, user_id: int, record, approval_window_minutes: int | None) -> str | None:
+        if record.status != "approved":
+            return self._read_approved_until(record.input)
+        if not approval_window_minutes:
+            return None
+        input_payload = dict(record.input) if isinstance(record.input, dict) else {}
+        meta = dict(input_payload.get("_consentos", {}))
+        approved_until = (record.created_at + timedelta(minutes=approval_window_minutes)).isoformat()
+        meta["approved_until"] = approved_until
+        input_payload["_consentos"] = meta
+        self.activity_service.update_input(user_id, record.id, input_payload)
+        return approved_until
+
+    @staticmethod
+    def _read_approved_until(input_payload) -> str | None:
+        if not isinstance(input_payload, dict):
+            return None
+        meta = input_payload.get("_consentos")
+        if not isinstance(meta, dict):
+            return None
+        value = meta.get("approved_until")
+        if isinstance(value, str):
+            return value
+        return None

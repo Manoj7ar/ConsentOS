@@ -93,6 +93,7 @@ class BackendClient:
         tool_name: str,
         action: str,
         input: dict[str, Any],
+        approval_window_minutes: int | None = None,
     ) -> dict[str, Any]:
         enriched_input = self._with_activity_meta(context, input, policy_decision="approval_required")
         return await self._request(
@@ -105,6 +106,7 @@ class BackendClient:
                 "tool_name": tool_name,
                 "action": action,
                 "input": enriched_input,
+                "approval_window_minutes": approval_window_minutes,
             },
         )
 

@@ -54,3 +54,8 @@ class ActivityLogRepository:
             record.authorization_request_id = authorization_request_id
         self.session.flush()
         return record
+
+    def update_input(self, record: ActivityLog, *, input_payload: dict) -> ActivityLog:
+        record.input = input_payload
+        self.session.flush()
+        return record

@@ -20,6 +20,7 @@ export type PermissionRule = {
   tool_name: string;
   is_allowed: boolean;
   risk_level: string;
+  approval_window_minutes?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -79,6 +80,7 @@ export type PolicySimulationRequest = {
   connected_account_present?: boolean | null;
   strict_live_required?: boolean;
   permission_allowed_override?: boolean | null;
+  approval_window_minutes_override?: number | null;
 };
 
 export type PolicySimulationResult = {
@@ -86,6 +88,7 @@ export type PolicySimulationResult = {
   risk_level: string;
   permission_allowed: boolean;
   needs_approval: boolean;
+  approval_window_minutes?: number | null;
   connected_account_status: string;
   strict_live_mode: boolean;
   reason_codes: string[];

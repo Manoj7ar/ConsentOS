@@ -44,6 +44,13 @@ class ActivityService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity not found.")
         return record
 
+    def update_input(self, user_id: int, activity_id: int, input_payload: dict) -> ActivityRead:
+        record = self.repo.get_for_user(user_id, activity_id)
+        if record is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity not found.")
+        record = self.repo.update_input(record, input_payload)
+        return self._to_read_model(record)
+
     @staticmethod
     def _to_read_model(record) -> ActivityRead:
         meta_payload = record.input.get("_consentos", {}) if isinstance(record.input, dict) else {}

@@ -12,6 +12,7 @@ class PermissionRuleRead(BaseModel):
     tool_name: str
     is_allowed: bool
     risk_level: str
+    approval_window_minutes: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -22,6 +23,7 @@ class PermissionUpsert(BaseModel):
     tool_name: str
     is_allowed: bool
     risk_level: str
+    approval_window_minutes: int | None = None
 
 
 class RiskCheckRequest(BaseModel):
@@ -34,6 +36,7 @@ class RiskCheckResponse(BaseModel):
     permission_allowed: bool
     needs_approval: bool
     risk_level: str
+    approval_window_minutes: int | None = None
 
 
 class PolicySimulationRequest(BaseModel):
@@ -44,6 +47,7 @@ class PolicySimulationRequest(BaseModel):
     connected_account_present: bool | None = None
     strict_live_required: bool = True
     permission_allowed_override: bool | None = None
+    approval_window_minutes_override: int | None = None
 
 
 class PolicySimulationResponse(BaseModel):
@@ -51,6 +55,7 @@ class PolicySimulationResponse(BaseModel):
     risk_level: str
     permission_allowed: bool
     needs_approval: bool
+    approval_window_minutes: int | None = None
     connected_account_status: str
     strict_live_mode: bool
     reason_codes: list[str] = Field(default_factory=list)

@@ -159,6 +159,38 @@ def test_permission_override_and_risk_check(client, auth_headers):
     assert risk.json()["needs_approval"] is True
 
 
+def test_permission_can_set_time_bound_approval_window(client, auth_headers):
+    upsert = client.post(
+        "/api/permissions",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "google",
+            "tool_name": "gmail:send_email",
+            "is_allowed": True,
+            "risk_level": "high",
+            "approval_window_minutes": 15,
+        },
+    )
+    assert upsert.status_code == 200
+    upsert_payload = upsert.json()
+    assert upsert_payload["approval_window_minutes"] == 15
+
+    risk = client.post(
+        "/api/risk/require_approval",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "google",
+            "tool_name": "gmail:send_email",
+        },
+    )
+    assert risk.status_code == 200
+    payload = risk.json()
+    assert payload["needs_approval"] is True
+    assert payload["approval_window_minutes"] == 15
+
+
 def test_stripe_payment_link_requires_approval_even_if_risk_lowered(client, auth_headers):
     client.post(
         "/api/accounts/sync",
@@ -419,3 +451,34 @@ def test_policy_simulation_reports_policy_block(client, auth_headers):
     blocked_payload = blocked.json()
     assert blocked_payload["decision"] == "blocked"
     assert "tool_blocked_by_policy" in blocked_payload["reason_codes"]
+
+
+def test_policy_simulation_reports_approval_window_explanation(client, auth_headers):
+    client.post(
+        "/api/permissions",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "google",
+            "tool_name": "gmail:send_email",
+            "is_allowed": True,
+            "risk_level": "high",
+            "approval_window_minutes": 30,
+        },
+    )
+    response = client.post(
+        "/api/permissions/simulate",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "google",
+            "tool_name": "gmail:send_email",
+            "connected_account_present": True,
+            "strict_live_required": False,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["decision"] == "approval_required"
+    assert payload["approval_window_minutes"] == 30
+    assert "approval_window_30m" in payload["reason_codes"]

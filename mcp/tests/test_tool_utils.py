@@ -81,3 +81,27 @@ async def test_schedule_after_approval_marks_timeout_as_failed(monkeypatch):
 
     assert performer_called is False
     assert backend.updated == [(42, "failed")]
+
+
+@pytest.mark.anyio
+async def test_wait_for_approval_honors_expiry_in_response(monkeypatch):
+    monkeypatch.setattr(
+        tool_utils,
+        "get_settings",
+        lambda: SimpleNamespace(approval_timeout_seconds=10, approval_poll_interval_seconds=1),
+    )
+    backend = FakeBackend(
+        [
+            {
+                "status": "pending",
+                "detail": "waiting",
+                "expires_at": "2000-01-01T00:00:00+00:00",
+            }
+        ]
+    )
+    context = AgentContext(user_sub="auth0|demo-user", email="demo@example.com")
+
+    result = await tool_utils.wait_for_approval(backend, context, 99)
+
+    assert result["status"] == "failed"
+    assert "expired" in result["detail"].lower()
