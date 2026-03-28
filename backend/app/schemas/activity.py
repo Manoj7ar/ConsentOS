@@ -26,6 +26,11 @@ class ActivityMeta(BaseModel):
     workflow_run_id: str | None = None
     policy_decision: str | None = None
     approval_mode: str | None = None
+    receipt_id: str | None = None
+    receipt_hash: str | None = None
+    receipt_prev_hash: str | None = None
+    chain_verified: bool | None = None
+    request_id: str | None = None
 
 
 class ActivityRead(BaseModel):
@@ -39,7 +44,21 @@ class ActivityRead(BaseModel):
     status: str
     authorization_request_id: str | None = None
     created_at: datetime
+    receipt_id: str | None = None
+    receipt_hash: str | None = None
+    receipt_prev_hash: str | None = None
+    chain_valid: bool | None = None
+    request_id: str | None = None
 
 
 class ActivityListResponse(BaseModel):
     items: list[ActivityRead]
+
+
+class ActivityIntegrityCheckResponse(BaseModel):
+    status: str
+    checked_records: int
+    broken_record_ids: list[int] = Field(default_factory=list)
+    latest_receipt_hash: str | None = None
+    first_invalid_receipt_id: str | None = None
+    detail: str

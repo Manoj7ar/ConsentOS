@@ -482,3 +482,75 @@ def test_policy_simulation_reports_approval_window_explanation(client, auth_head
     assert payload["decision"] == "approval_required"
     assert payload["approval_window_minutes"] == 30
     assert "approval_window_30m" in payload["reason_codes"]
+
+
+def test_activity_receipt_chain_verification_endpoint(client, auth_headers):
+    first = client.post(
+        "/api/activity",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "google",
+            "tool_name": "gmail:read_inbox_summary",
+            "action": "read_inbox_summary",
+            "input": {"limit": 5},
+            "status": "completed",
+        },
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/activity",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "github",
+            "tool_name": "github:read_open_issues",
+            "action": "read_open_issues",
+            "input": {"repo_slug": "owner/repo"},
+            "status": "completed",
+        },
+    )
+    assert second.status_code == 200
+
+    verify = client.get("/api/security/receipt-chain/verify", headers=auth_headers)
+    assert verify.status_code == 200
+    payload = verify.json()
+    assert payload["status"] == "ok"
+    assert payload["checked_records"] >= 2
+    assert payload["broken_record_ids"] == []
+    assert payload["latest_receipt_hash"]
+
+
+def test_emergency_write_control_blocks_write_tool_simulation(client, auth_headers):
+    response = client.post("/api/security/write-control", headers=auth_headers, json={"enabled": True})
+    assert response.status_code == 200
+    assert response.json()["enabled"] is True
+
+    simulated = client.post(
+        "/api/permissions/simulate",
+        headers=auth_headers,
+        json={
+            "agent_name": "FreelanceCOOAgent",
+            "provider": "google",
+            "tool_name": "gmail:send_email",
+            "connected_account_present": True,
+            "strict_live_required": False,
+        },
+    )
+    assert simulated.status_code == 200
+    payload = simulated.json()
+    assert payload["decision"] == "blocked"
+    assert payload["writes_globally_blocked"] is True
+    assert "global_write_kill_switch" in payload["reason_codes"]
+
+
+def test_permissions_blast_radius_endpoint_returns_items(client, auth_headers):
+    response = client.get("/api/permissions/blast-radius", headers=auth_headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert "items" in payload
+    assert isinstance(payload["items"], list)
+    assert payload["items"]
+    first = payload["items"][0]
+    assert {"provider", "tool_name", "risk_level", "writes_globally_blocked", "blast_radius"} <= set(first.keys())

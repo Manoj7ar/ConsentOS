@@ -163,6 +163,22 @@ export function PolicySimulationCard({ rules }: PolicySimulationCardProps) {
           </article>
           <article className="diagnostic-row">
             <div>
+              <strong>Global write control</strong>
+              <p>
+                {result.writes_globally_blocked
+                  ? "Emergency write block is active, so write actions are blocked regardless of tool-level policy."
+                  : "Emergency write block is inactive for this decision path."}
+              </p>
+            </div>
+          </article>
+          <article className="diagnostic-row">
+            <div>
+              <strong>Blast radius preview</strong>
+              <p>{(result.blast_radius ?? []).join(" | ") || "No blast radius metadata available."}</p>
+            </div>
+          </article>
+          <article className="diagnostic-row">
+            <div>
               <strong>Reason codes</strong>
               <p>{result.reason_codes.join(", ")}</p>
             </div>

@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends
 
 from app.deps import get_current_user, get_db
 from app.schemas.auth import AuthenticatedUser
-from app.schemas.permissions import PermissionRuleRead, PermissionUpsert, PolicySimulationRequest, PolicySimulationResponse
+from app.schemas.permissions import (
+    BlastRadiusResponse,
+    PermissionRuleRead,
+    PermissionUpsert,
+    PolicySimulationRequest,
+    PolicySimulationResponse,
+    ToolBlastRadius,
+)
 from app.services.permissions_service import PermissionsService
 
 router = APIRouter(prefix="/api/permissions", tags=["permissions"])
@@ -31,3 +38,13 @@ def simulate_policy(
     db=Depends(get_db),
 ) -> PolicySimulationResponse:
     return PermissionsService(db).simulate(current_user.id, payload)
+
+
+@router.get("/blast-radius", response_model=BlastRadiusResponse)
+def blast_radius(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> BlastRadiusResponse:
+    raw = PermissionsService(db).blast_radius(current_user.id)
+    return BlastRadiusResponse(items=[ToolBlastRadius(**item) for item in raw["items"]])
+

@@ -32,11 +32,12 @@ Use this exact flow for the required public demo video.
   - approval mode in activity metadata
   - action completion after approval
 
-## 2:20 - 2:45 Guardrail block
+## 2:20 - 2:45 Guardrail block + trust proof
 
-- Disable a tool in **FreelanceCOOAgent permissions**.
-- Re-run related prompt.
-- Show policy block reason and simulator explanation/reason codes.
+- Enable **Emergency write stop** in Security Controls.
+- Re-run a write simulation (for example `gmail:send_email`) and show `global_write_kill_switch`.
+- Click **Verify chain** and show receipt-chain status is `ok` with latest hash.
+- Optionally open Activity details and point at `Receipt hash` + `Previous hash`.
 
 ## 2:45 - 3:00 Closing
 

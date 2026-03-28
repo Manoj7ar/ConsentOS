@@ -6,7 +6,10 @@ import type {
   OrchestratorHealth,
   PolicySimulationRequest,
   PolicySimulationResult,
-  PermissionRule
+  PermissionRule,
+  ReceiptIntegritySummary,
+  ToolBlastRadiusResponse,
+  WriteControlStatus
 } from "@/lib/types";
 import { KNOWN_PROVIDERS } from "@/lib/types";
 
@@ -80,6 +83,28 @@ export async function updatePermission(payload: PermissionRule): Promise<Permiss
 export async function fetchActivity(): Promise<ActivityItem[]> {
   const payload = await parseJson<{ items: ActivityItem[] }>(await fetch("/api/activity", { cache: "no-store" }));
   return payload.items;
+}
+
+export async function fetchReceiptIntegrity(): Promise<ReceiptIntegritySummary> {
+  return parseJson<ReceiptIntegritySummary>(await fetch("/api/security/receipt-chain/verify", { cache: "no-store" }));
+}
+
+export async function fetchWriteControl(): Promise<WriteControlStatus> {
+  return parseJson<WriteControlStatus>(await fetch("/api/security/write-control", { cache: "no-store" }));
+}
+
+export async function updateWriteControl(enabled: boolean): Promise<WriteControlStatus> {
+  return parseJson<WriteControlStatus>(
+    await fetch("/api/security/write-control", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled })
+    })
+  );
+}
+
+export async function fetchBlastRadius(): Promise<ToolBlastRadiusResponse> {
+  return parseJson<ToolBlastRadiusResponse>(await fetch("/api/permissions/blast-radius", { cache: "no-store" }));
 }
 
 export async function sendChat(messages: ChatMessage[]) {

@@ -40,10 +40,11 @@ def get_ciba_provider(request: Request, settings: Settings = Depends(get_setting
 
 def get_current_user(request: Request, settings: Settings = Depends(get_settings), db=Depends(get_db)) -> AuthenticatedUser:
     identity, raw_access_token = resolve_identity(request, settings)
-    user_id = UserService(db).ensure_user(identity["sub"])
+    user = UserService(db).ensure_user(identity["sub"])
     return AuthenticatedUser(
-        id=user_id,
-        auth0_sub=identity["sub"],
+        id=user.id,
+        auth0_sub=user.auth0_sub,
         email=identity.get("email"),
         raw_access_token=raw_access_token,
+        emergency_write_blocked=user.emergency_write_blocked,
     )

@@ -104,6 +104,15 @@ export function ActivityTable() {
                           <p>
                             <strong>Input summary:</strong> {inputSummary || "No additional input payload."}
                           </p>
+                          <p>
+                            <strong>Receipt hash:</strong> {item.receipt_hash ?? item.activity_meta.receipt_hash ?? "n/a"}
+                          </p>
+                          <p>
+                            <strong>Previous hash:</strong> {item.receipt_prev_hash ?? item.activity_meta.receipt_prev_hash ?? "n/a"}
+                          </p>
+                          <p>
+                            <strong>Request ID:</strong> {item.request_id ?? item.activity_meta.request_id ?? "n/a"}
+                          </p>
                         </div>
                       </td>
                     </tr>

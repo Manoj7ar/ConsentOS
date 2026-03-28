@@ -37,6 +37,7 @@ class RiskCheckResponse(BaseModel):
     needs_approval: bool
     risk_level: str
     approval_window_minutes: int | None = None
+    writes_globally_blocked: bool = False
 
 
 class PolicySimulationRequest(BaseModel):
@@ -56,7 +57,21 @@ class PolicySimulationResponse(BaseModel):
     permission_allowed: bool
     needs_approval: bool
     approval_window_minutes: int | None = None
+    writes_globally_blocked: bool = False
+    blast_radius: list[str] = Field(default_factory=list)
     connected_account_status: str
     strict_live_mode: bool
     reason_codes: list[str] = Field(default_factory=list)
     explanation: str
+
+
+class ToolBlastRadius(BaseModel):
+    provider: str
+    tool_name: str
+    risk_level: str
+    writes_globally_blocked: bool
+    blast_radius: list[str] = Field(default_factory=list)
+
+
+class BlastRadiusResponse(BaseModel):
+    items: list[ToolBlastRadius] = Field(default_factory=list)

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { Geist_Mono, Manrope, Sora } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "@/styles/globals.css";
 
-const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["400", "500"] });
+const display = Sora({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700"] });
+const body = Manrope({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "ConsentOS",
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${display.variable} ${mono.variable}`}>
+      <body className={`${display.variable} ${body.variable} ${mono.variable}`}>
         <div className="page-shell">
           <header className="site-header">
             <Link href="/" className="brand-mark">

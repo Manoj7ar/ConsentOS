@@ -106,7 +106,7 @@ class BackendClient:
                 "tool_name": tool_name,
                 "action": action,
                 "input": enriched_input,
-                "approval_window_minutes": approval_window_minutes,
+                "expires_in_minutes": approval_window_minutes,
             },
         )
 

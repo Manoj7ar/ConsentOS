@@ -26,6 +26,8 @@ def init_db(engine) -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_connected_account_columns(engine)
     _ensure_permission_columns(engine)
+    _ensure_user_columns(engine)
+    _ensure_activity_columns(engine)
 
 
 def session_scope(session_factory) -> Generator[Session, None, None]:
@@ -79,3 +81,44 @@ def _ensure_permission_columns(engine) -> None:
     with engine.begin() as connection:
         for name, definition in missing.items():
             connection.execute(text(f"ALTER TABLE permissions ADD COLUMN {name} {definition}"))
+
+
+def _ensure_user_columns(engine) -> None:
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("users")}
+    required_columns = {
+        "emergency_write_blocked": "BOOLEAN NOT NULL DEFAULT 0",
+    }
+
+    missing = {name: definition for name, definition in required_columns.items() if name not in existing}
+    if not missing:
+        return
+
+    with engine.begin() as connection:
+        for name, definition in missing.items():
+            connection.execute(text(f"ALTER TABLE users ADD COLUMN {name} {definition}"))
+
+
+def _ensure_activity_columns(engine) -> None:
+    inspector = inspect(engine)
+    if "activity_log" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("activity_log")}
+    required_columns = {
+        "request_id": "VARCHAR(64) NULL",
+        "receipt_hash": "VARCHAR(128) NULL",
+        "previous_receipt_hash": "VARCHAR(128) NULL",
+        "receipt_payload_hash": "VARCHAR(128) NULL",
+    }
+
+    missing = {name: definition for name, definition in required_columns.items() if name not in existing}
+    if not missing:
+        return
+
+    with engine.begin() as connection:
+        for name, definition in missing.items():
+            connection.execute(text(f"ALTER TABLE activity_log ADD COLUMN {name} {definition}"))
