@@ -19,6 +19,7 @@ class Permission(Base):
     tool_name: Mapped[str] = mapped_column(String(255), index=True)
     is_allowed: Mapped[bool] = mapped_column(Boolean, default=True)
     risk_level: Mapped[str] = mapped_column(String(20), default="low")
+    approval_window_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

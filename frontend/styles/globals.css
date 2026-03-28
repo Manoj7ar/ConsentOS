@@ -472,6 +472,42 @@ input {
   background: rgba(255, 255, 255, 0.62);
 }
 
+.permission-row__summary {
+  display: grid;
+  gap: 6px;
+}
+
+.permission-row__summary strong {
+  display: block;
+}
+
+.permission-row__summary p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.permission-row__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.window-input {
+  width: 96px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.window-input:disabled {
+  opacity: 0.55;
+}
+
+.window-hint {
+  margin-top: 8px;
+}
+
 .risk-tag {
   display: inline-block;
   padding: 2px 8px;

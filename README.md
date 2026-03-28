@@ -137,6 +137,33 @@ The dashboard will also show blocking checks and refuse live execution until the
 7. Approve any high-risk step-up actions on your phone.
 8. Review the activity timeline for receipts and final status.
 
+## Hackathon Submission Checklist
+
+- [ ] Publish a 3-minute public demo video (YouTube/Vimeo/Facebook/Youku).
+- [ ] Add the public video link to your Devpost submission.
+- [ ] Provide a published project/application link (or explain why not applicable).
+- [ ] Confirm `/health/ready` and `/health/ready` (orchestrator) are green in your demo environment.
+- [ ] Demonstrate at least one blocked action and one approval-required action.
+- [ ] Show that connected accounts are synced from Auth0 and not stored as raw provider tokens in this repo.
+
+## Judge-Mode Demo Script (3 minutes)
+
+1. Open dashboard and show Auth0 diagnostics + strict live mode checks.
+2. Run **Calendar Review** (read-only path) to show safe delegated reads.
+3. Run **Invoice Collections** and show approval-required write proposals.
+4. Trigger a blocked flow (disable a tool in permissions) and show refusal.
+5. Re-enable policy, approve a high-risk step (CIBA), and show activity receipt trail.
+
+## Dev Commands
+
+```bash
+make bootstrap
+make readiness
+make test
+make lint
+make demo-check
+```
+
 ## Notes
 
 - Next.js owns the browser Auth0 session and forwards a trusted subject token to the backend and orchestrator for live Token Vault exchange.

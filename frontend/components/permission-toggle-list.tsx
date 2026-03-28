@@ -17,6 +17,11 @@ export function PermissionToggleList({ rules, onToggle }: PermissionToggleListPr
             <p>
               Risk <span className={`risk-tag risk-${rule.risk_level}`}>{rule.risk_level}</span>
             </p>
+            <p className="muted permission-ttl">
+              {rule.approval_window_minutes
+                ? `Approval window: ${rule.approval_window_minutes} minutes`
+                : "Approval window: single action"}
+            </p>
           </div>
           <input
             type="checkbox"

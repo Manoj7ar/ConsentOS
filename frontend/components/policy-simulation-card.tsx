@@ -36,7 +36,8 @@ const PRESETS: Array<{
       provider: "stripe",
       tool_name: "stripe:create_payment_link",
       connected_account_present: true,
-      strict_live_required: true
+      strict_live_required: true,
+      approval_window_minutes_override: 30
     }
   },
   {
@@ -106,7 +107,8 @@ export function PolicySimulationCard({ rules }: PolicySimulationCardProps) {
               ? void runSimulation({
                   agent_name: selectedRule.agent_name || "FreelanceCOOAgent",
                   provider: selectedRule.provider,
-                  tool_name: selectedRule.tool_name
+                  tool_name: selectedRule.tool_name,
+                  approval_window_minutes_override: selectedRule.approval_window_minutes ?? null
                 })
               : undefined
           }
@@ -146,6 +148,16 @@ export function PolicySimulationCard({ rules }: PolicySimulationCardProps) {
               <p>
                 Risk: {result.risk_level}. Connected account state: {result.connected_account_status}. Strict live
                 mode: {result.strict_live_mode ? "enabled" : "disabled"}.
+              </p>
+            </div>
+          </article>
+          <article className="diagnostic-row">
+            <div>
+              <strong>Delegated approval window</strong>
+              <p>
+                {result.approval_window_minutes
+                  ? `When approved, this tool can execute without another prompt for ${result.approval_window_minutes} minutes.`
+                  : "No delegated approval window configured; approval is required each time for risky actions."}
               </p>
             </div>
           </article>

@@ -122,7 +122,9 @@ export function AuthorizationPanel() {
       <div className="permissions-section">
         <div className="permissions-title">
           <h3>FreelanceCOOAgent permissions</h3>
-          <p className="muted">Toggle any provider tool off to block the agent from calling it.</p>
+          <p className="muted">
+            Toggle tools off to hard-block them, then optionally set a one-time approval window for high-risk actions.
+          </p>
         </div>
         <PermissionToggleList rules={permissions} onToggle={onToggle} />
       </div>
