@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
+from app.models.user import User
 from app.services.connected_accounts_service import ConnectedAccountsService
 from app.repositories.permissions import PermissionRepository
 from app.schemas.permissions import (
@@ -108,6 +109,15 @@ class PermissionsService:
 
     def evaluate(self, user_id: int, agent_name: str, provider: str, tool_name: str) -> RiskCheckResponse:
         self.repo.clear_expired_for_user(user_id)
+        write_blocked = self._writes_are_globally_blocked(user_id)
+        if write_blocked and self._is_write_tool(tool_name):
+            return RiskCheckResponse(
+                permission_allowed=False,
+                needs_approval=False,
+                risk_level=DEFAULT_TOOL_RISK.get(tool_name, "medium"),
+                approval_window_minutes=None,
+                writes_globally_blocked=True,
+            )
         row = self.repo.get_for_tool(user_id, agent_name, provider, tool_name)
         if row is None:
             is_allowed = True
@@ -123,6 +133,7 @@ class PermissionsService:
             needs_approval=needs_approval,
             risk_level=risk_level,
             approval_window_minutes=approval_window_minutes,
+            writes_globally_blocked=write_blocked and self._is_write_tool(tool_name),
         )
 
     def simulate(self, user_id: int, payload: PolicySimulationRequest) -> PolicySimulationResponse:
@@ -140,9 +151,12 @@ class PermissionsService:
             override_present=payload.connected_account_present,
         )
         reason_codes: list[str] = []
+        blast_radius = self._blast_radius(payload.provider, payload.tool_name)
 
         if payload.strict_live_required and not self.settings.strict_live_mode:
             reason_codes.append("strict_live_disabled")
+        if risk.writes_globally_blocked:
+            reason_codes.append("global_write_kill_switch")
         if payload.connected_account_required and connected_account_status != "connected":
             reason_codes.append(
                 "provider_account_missing" if connected_account_status == "disconnected" else "provider_account_stale"
@@ -167,6 +181,8 @@ class PermissionsService:
             permission_allowed=permission_allowed,
             needs_approval=needs_approval,
             approval_window_minutes=approval_window_minutes,
+            writes_globally_blocked=risk.writes_globally_blocked,
+            blast_radius=blast_radius,
             connected_account_status=connected_account_status,
             strict_live_mode=self.settings.strict_live_mode,
             reason_codes=reason_codes,
@@ -217,9 +233,49 @@ class PermissionsService:
             )
         return "Policy and account state allow this action to execute immediately."
 
+    def _writes_are_globally_blocked(self, user_id: int) -> bool:
+        user = self.repo.session.get(User, user_id)
+        return bool(user and getattr(user, "emergency_write_blocked", False))
+
+    @staticmethod
+    def _is_write_tool(tool_name: str) -> bool:
+        return any(
+            marker in tool_name
+            for marker in ("send", "create_", "open_issue", "post_message", "draft_followup_email")
+        )
+
+    @staticmethod
+    def _blast_radius(provider: str, tool_name: str) -> list[str]:
+        if provider == "google" and tool_name == "gmail:send_email":
+            return ["Sends outbound email as user", "May reach external recipients", "Creates irreversible communication trail"]
+        if provider == "google" and tool_name == "calendar:create_meeting":
+            return ["Writes calendar event", "Invites attendee email(s)", "Triggers calendar notifications"]
+        if provider == "stripe" and tool_name == "stripe:create_payment_link":
+            return ["Creates payable Stripe URL", "Can trigger real customer payment flow", "Visible to recipient immediately"]
+        if provider == "github" and tool_name == "github:open_issue":
+            return ["Creates public/internal issue artifact", "Triggers repository notifications", "Persists in engineering workflow"]
+        if provider == "slack" and tool_name == "slack:post_message":
+            return ["Posts in team channel", "Mentions can notify teammates", "May trigger downstream incident workflows"]
+        return ["Low blast radius read-only action"]
+
     def approval_window_minutes_for_tool(self, user_id: int, agent_name: str, provider: str, tool_name: str) -> int | None:
         self.repo.clear_expired_for_user(user_id)
         row = self.repo.get_for_tool(user_id, agent_name, provider, tool_name)
         if row is None or not row.is_allowed:
             return None
         return row.approval_window_minutes
+
+    def blast_radius(self, user_id: int) -> dict:
+        items = []
+        writes_blocked = self._writes_are_globally_blocked(user_id)
+        for rule in self.list_permissions(user_id):
+            items.append(
+                {
+                    "provider": rule.provider,
+                    "tool_name": rule.tool_name,
+                    "risk_level": rule.risk_level,
+                    "writes_globally_blocked": writes_blocked and self._is_write_tool(rule.tool_name),
+                    "blast_radius": self._blast_radius(rule.provider, rule.tool_name),
+                }
+            )
+        return {"items": items}

@@ -33,6 +33,10 @@ class ActivityLogRepository:
         input: dict,
         status: str,
         authorization_request_id: str | None = None,
+        request_id: str | None = None,
+        receipt_prev_hash: str | None = None,
+        receipt_payload_hash: str | None = None,
+        receipt_hash: str | None = None,
     ) -> ActivityLog:
         record = ActivityLog(
             user_id=user_id,
@@ -43,6 +47,10 @@ class ActivityLogRepository:
             input=input,
             status=status,
             authorization_request_id=authorization_request_id,
+            request_id=request_id,
+            receipt_prev_hash=receipt_prev_hash,
+            receipt_payload_hash=receipt_payload_hash,
+            receipt_hash=receipt_hash,
         )
         self.session.add(record)
         self.session.flush()
@@ -59,3 +67,21 @@ class ActivityLogRepository:
         record.input = input_payload
         self.session.flush()
         return record
+
+    def latest_hash_for_user(self, user_id: int) -> str | None:
+        latest = self.last_for_user(user_id)
+        if latest is None:
+            return None
+        return latest.receipt_hash
+
+    def list_for_user_chronological(self, user_id: int) -> list[ActivityLog]:
+        return list(
+            self.session.scalars(
+                select(ActivityLog).where(ActivityLog.user_id == user_id).order_by(ActivityLog.created_at.asc(), ActivityLog.id.asc())
+            )
+        )
+
+    def last_for_user(self, user_id: int) -> ActivityLog | None:
+        return self.session.scalar(
+            select(ActivityLog).where(ActivityLog.user_id == user_id).order_by(ActivityLog.created_at.desc(), ActivityLog.id.desc()).limit(1)
+        )

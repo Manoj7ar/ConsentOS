@@ -9,6 +9,7 @@ from app.api.approvals import router as approvals_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.permissions import router as permissions_router
+from app.api.security import router as security_router
 from app.api.token_vault import router as token_vault_router
 from app.config import Settings, get_settings
 from app.db import build_session_factory, init_db
@@ -36,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router)
     app.include_router(accounts_router)
     app.include_router(permissions_router)
+    app.include_router(security_router)
     app.include_router(activity_router)
     app.include_router(token_vault_router)
     app.include_router(approvals_router)

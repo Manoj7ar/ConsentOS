@@ -33,6 +33,9 @@ Use this list to move from "working prototype" to "judge-ready submission."
 - [ ] Show a high-risk write action that requires approval
 - [ ] Show policy simulator reason codes for allowed, blocked, and approval-required paths
 - [ ] Show temporary delegated consent on a single tool (time-boxed approval window)
+- [ ] Toggle the emergency write stop on and prove write workflows are blocked
+- [ ] Run receipt-chain verification and show a valid hash-linked audit trail
+- [ ] Show blast-radius preview before confirming a high-risk workflow
 
 ## Demo polish
 
@@ -48,3 +51,5 @@ Use this list to move from "working prototype" to "judge-ready submission."
 3. High-risk actions require explicit CIBA approval.
 4. Temporary delegated consent can reduce approval spam while staying time-bounded.
 5. Every action emits activity metadata and approval context for auditability.
+6. Emergency write stop can freeze all write actions immediately.
+7. Blast-radius preview explains expected downstream impact before execution.

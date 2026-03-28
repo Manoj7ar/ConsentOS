@@ -11,13 +11,25 @@ import { SetupGuideCard } from "@/components/setup-guide-card";
 import { getDisplayErrorMessage } from "@/lib/error-display";
 import {
   buildConnectAccountUrl,
+  fetchBlastRadius,
   fetchAccounts,
   fetchAuthDiagnostics,
   fetchPermissions,
+  fetchReceiptIntegrity,
+  fetchWriteControl,
   syncAccounts,
+  updateWriteControl,
   updatePermission
 } from "@/lib/api";
-import type { AuthDiagnostics, ConnectedAccount, PermissionRule } from "@/lib/types";
+import { SecurityControlsCard } from "@/components/security-controls-card";
+import type {
+  AuthDiagnostics,
+  ConnectedAccount,
+  PermissionRule,
+  ReceiptIntegritySummary,
+  ToolBlastRadius,
+  WriteControlStatus
+} from "@/lib/types";
 import { KNOWN_PROVIDERS } from "@/lib/types";
 
 export function AuthorizationPanel() {
@@ -26,8 +38,12 @@ export function AuthorizationPanel() {
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [permissions, setPermissions] = useState<PermissionRule[]>([]);
   const [diagnostics, setDiagnostics] = useState<AuthDiagnostics | null>(null);
+  const [writeControl, setWriteControl] = useState<WriteControlStatus | null>(null);
+  const [receiptIntegrity, setReceiptIntegrity] = useState<ReceiptIntegritySummary | null>(null);
+  const [blastRadius, setBlastRadius] = useState<ToolBlastRadius[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
+  const [securityError, setSecurityError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
   async function load(options?: { sync?: boolean }) {
@@ -43,11 +59,15 @@ export function AuthorizationPanel() {
       }
     }
 
-    const [accountsResult, permissionsResult, diagnosticsResult] = await Promise.allSettled([
-      fetchAccounts(),
-      fetchPermissions(),
-      fetchAuthDiagnostics()
-    ]);
+    const [accountsResult, permissionsResult, diagnosticsResult, writeControlResult, receiptIntegrityResult, blastRadiusResult] =
+      await Promise.allSettled([
+        fetchAccounts(),
+        fetchPermissions(),
+        fetchAuthDiagnostics(),
+        fetchWriteControl(),
+        fetchReceiptIntegrity(),
+        fetchBlastRadius()
+      ]);
 
     if (accountsResult.status === "fulfilled") {
       setAccounts(accountsResult.value);
@@ -69,6 +89,31 @@ export function AuthorizationPanel() {
       setDiagnosticsError(getDisplayErrorMessage(diagnosticsResult.reason));
     }
 
+    let nextSecurityError: string | null = null;
+    if (writeControlResult.status === "fulfilled") {
+      setWriteControl(writeControlResult.value);
+    } else {
+      nextSecurityError = getDisplayErrorMessage(writeControlResult.reason);
+      setWriteControl(null);
+    }
+    if (receiptIntegrityResult.status === "fulfilled") {
+      setReceiptIntegrity(receiptIntegrityResult.value);
+    } else {
+      if (!nextSecurityError) {
+        nextSecurityError = getDisplayErrorMessage(receiptIntegrityResult.reason);
+      }
+      setReceiptIntegrity(null);
+    }
+    if (blastRadiusResult.status === "fulfilled") {
+      setBlastRadius(blastRadiusResult.value.items);
+    } else {
+      if (!nextSecurityError) {
+        nextSecurityError = getDisplayErrorMessage(blastRadiusResult.reason);
+      }
+      setBlastRadius([]);
+    }
+    setSecurityError(nextSecurityError);
+
     setError(nextError);
     setIsSyncing(false);
   }
@@ -89,6 +134,11 @@ export function AuthorizationPanel() {
     await load({ sync: false });
   }
 
+  async function onWriteControlToggle(nextEnabled: boolean) {
+    await updateWriteControl(nextEnabled);
+    await load({ sync: false });
+  }
+
   return (
     <section className="panel panel-authz">
       <div className="panel__header">
@@ -104,6 +154,14 @@ export function AuthorizationPanel() {
       {error ? <div className="error-banner">{error}</div> : null}
 
       <Auth0StatusCard diagnostics={diagnostics} error={diagnosticsError} />
+      <SecurityControlsCard
+        writeControl={writeControl}
+        receiptIntegrity={receiptIntegrity}
+        blastRadius={blastRadius}
+        error={securityError}
+        onToggleWriteControl={onWriteControlToggle}
+        onRefresh={() => void load({ sync: false })}
+      />
       <PolicySimulationCard rules={permissions} />
       <SetupGuideCard />
 

@@ -36,6 +36,11 @@ export type ActivityItem = {
   status: string;
   authorization_request_id?: string | null;
   created_at: string;
+  receipt_id?: string | null;
+  receipt_hash?: string | null;
+  receipt_prev_hash?: string | null;
+  chain_valid?: boolean | null;
+  request_id?: string | null;
 };
 
 export type ChatMessage = {
@@ -70,6 +75,9 @@ export type ActivityMeta = {
   workflow_run_id?: string | null;
   policy_decision?: string | null;
   approval_mode?: string | null;
+  receipt_hash?: string | null;
+  receipt_prev_hash?: string | null;
+  request_id?: string | null;
 };
 
 export type PolicySimulationRequest = {
@@ -89,10 +97,37 @@ export type PolicySimulationResult = {
   permission_allowed: boolean;
   needs_approval: boolean;
   approval_window_minutes?: number | null;
+  writes_globally_blocked?: boolean;
+  blast_radius?: string[];
   connected_account_status: string;
   strict_live_mode: boolean;
   reason_codes: string[];
   explanation: string;
+};
+
+export type WriteControlStatus = {
+  enabled: boolean;
+  detail: string;
+};
+
+export type ReceiptIntegritySummary = {
+  status: string;
+  checked_records: number;
+  broken_record_ids: number[];
+  latest_receipt_hash?: string | null;
+  detail: string;
+};
+
+export type ToolBlastRadius = {
+  provider: string;
+  tool_name: string;
+  risk_level: string;
+  writes_globally_blocked: boolean;
+  blast_radius: string[];
+};
+
+export type ToolBlastRadiusResponse = {
+  items: ToolBlastRadius[];
 };
 
 export const KNOWN_PROVIDERS = [

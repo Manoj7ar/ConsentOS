@@ -22,6 +22,10 @@ class ActivityLog(Base):
     input: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(30), default="pending")
     authorization_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    receipt_prev_hash: Mapped[str | None] = mapped_column("previous_receipt_hash", String(128), nullable=True)
+    receipt_payload_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    receipt_hash: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     user = relationship("User", back_populates="activity_log")

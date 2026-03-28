@@ -3,7 +3,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app.deps import get_current_user, get_db
-from app.schemas.activity import ActivityCreate, ActivityListResponse, ActivityRead, ActivityUpdate
+from app.schemas.activity import (
+    ActivityCreate,
+    ActivityIntegrityCheckResponse,
+    ActivityListResponse,
+    ActivityRead,
+    ActivityUpdate,
+)
 from app.schemas.auth import AuthenticatedUser
 from app.services.activity_service import ActivityService
 
@@ -32,4 +38,12 @@ def update_activity(
     db=Depends(get_db),
 ) -> ActivityRead:
     return ActivityService(db).update(current_user.id, activity_id, payload)
+
+
+@router.get("/integrity", response_model=ActivityIntegrityCheckResponse)
+def activity_integrity(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> ActivityIntegrityCheckResponse:
+    return ActivityService(db).verify_integrity(current_user.id)
 
