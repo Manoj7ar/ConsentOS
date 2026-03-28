@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { DM_Sans, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "@/styles/globals.css";
 
-const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["400", "500"] });
+const display = DM_Sans({ subsets: ["latin"], variable: "--font-display", weight: ["400", "500", "700"] });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "ConsentOS",
